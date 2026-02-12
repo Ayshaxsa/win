@@ -1,35 +1,32 @@
 import streamlit as st
-import av
 import cv2
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
+import numpy as np
 
 st.title("Hand Volume Control - Cloud Demo")
 
-RTC_CONFIGURATION = RTCConfiguration(
-    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
-)
+st.write("Full hand tracking works locally on Windows (hand_volume.py).")
 
+run = st.checkbox("Start Webcam")
 
-class VideoProcessor(VideoProcessorBase):
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        img = cv2.flip(img, 1)
+FRAME_WINDOW = st.image([])
 
-        cv2.putText(
-            img,
-            "Webcam Running Successfully!",
-            (30, 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 255, 0),
-            2,
-        )
+cap = cv2.VideoCapture(0)
 
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
+while run:
+    ret, frame = cap.read()
+    if not ret:
+        st.write("No camera detected")
+        break
+    frame = cv2.flip(frame, 1)
+    cv2.putText(
+        frame,
+        "Webcam Running",
+        (30, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 255, 0),
+        2,
+    )
+    FRAME_WINDOW.image(frame, channels="BGR")
 
-
-webrtc_streamer(
-    key="demo",
-    rtc_configuration=RTC_CONFIGURATION,
-    video_processor_factory=VideoProcessor,
-)
+cap.release()

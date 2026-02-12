@@ -1,46 +1,36 @@
+import streamlit as st
 import cv2
 import mediapipe as mp
+import numpy as np
 import math
-from ctypes import cast, POINTER
-from comtypes import CLSCTX_ALL
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
-# ================= AUDIO SETUP =================
+st.title("Hand Gesture Volume Control (Demo Version)")
 
-devices = AudioUtilities.GetSpeakers()
-interface = devices.Activate(
-    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-volume_interface = cast(interface, POINTER(IAudioEndpointVolume))
+run = st.checkbox("Start Camera")
 
-minVol, maxVol, _ = volume_interface.GetVolumeRange()
-
-def set_volume(vol_percent):
-    vol_percent = max(0, min(100, vol_percent))
-    newVol = minVol + (vol_percent / 100) * (maxVol - minVol)
-    volume_interface.SetMasterVolumeLevel(newVol, None)
-
-# ================= HAND DETECTION =================
-
-cap = cv2.VideoCapture(0)
+FRAME_WINDOW = st.image([])
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.7)
 mp_draw = mp.solutions.drawing_utils
 
-while True:
-    success, img = cap.read()
-    if not success:
+camera = cv2.VideoCapture(0)
+
+while run:
+    ret, frame = camera.read()
+    if not ret:
+        st.write("Camera not detected")
         break
 
-    img = cv2.flip(img, 1)
-    h, w, c = img.shape
+    frame = cv2.flip(frame, 1)
+    h, w, c = frame.shape
 
-    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     result = hands.process(rgb)
 
     if result.multi_hand_landmarks:
         for hand_landmarks in result.multi_hand_landmarks:
-            mp_draw.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
             landmarks = hand_landmarks.landmark
 
@@ -50,24 +40,13 @@ while True:
             x2 = int(landmarks[4].x * w)
             y2 = int(landmarks[4].y * h)
 
-            cv2.circle(img, (x1, y1), 10, (0, 255, 255), -1)
-            cv2.circle(img, (x2, y2), 10, (0, 0, 255), -1)
-
             distance = math.hypot(x2 - x1, y2 - y1)
 
             volume_percent = int((distance / 200) * 100)
             volume_percent = max(0, min(100, volume_percent))
 
-            set_volume(volume_percent)
+            st.write(f"Volume Level: {volume_percent}%")
 
-            cv2.putText(img, f'Volume: {volume_percent}%',
-                        (50, 100), cv2.FONT_HERSHEY_SIMPLEX,
-                        1, (255, 0, 0), 3)
+    FRAME_WINDOW.image(frame, channels="BGR")
 
-    cv2.imshow("Hand Volume Control - Windows", img)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+camera.release()

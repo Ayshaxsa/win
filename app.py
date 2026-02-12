@@ -1,52 +1,67 @@
 import streamlit as st
+import av
 import cv2
 import mediapipe as mp
 import numpy as np
 import math
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
 
-st.title("Hand Gesture Volume Control (Demo Version)")
+st.title("Hand Gesture Volume Control (Web Demo)")
 
-run = st.checkbox("Start Camera")
-
-FRAME_WINDOW = st.image([])
+RTC_CONFIGURATION = RTCConfiguration(
+    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+)
 
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(min_detection_confidence=0.7)
 mp_draw = mp.solutions.drawing_utils
 
-camera = cv2.VideoCapture(0)
 
-while run:
-    ret, frame = camera.read()
-    if not ret:
-        st.write("Camera not detected")
-        break
+class HandVolumeProcessor(VideoProcessorBase):
+    def __init__(self):
+        self.hands = mp_hands.Hands(min_detection_confidence=0.7)
 
-    frame = cv2.flip(frame, 1)
-    h, w, c = frame.shape
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        img = cv2.flip(img, 1)
 
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    result = hands.process(rgb)
+        h, w, _ = img.shape
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        result = self.hands.process(rgb)
 
-    if result.multi_hand_landmarks:
-        for hand_landmarks in result.multi_hand_landmarks:
-            mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+        if result.multi_hand_landmarks:
+            for hand_landmarks in result.multi_hand_landmarks:
+                mp_draw.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-            landmarks = hand_landmarks.landmark
+                landmarks = hand_landmarks.landmark
 
-            x1 = int(landmarks[8].x * w)
-            y1 = int(landmarks[8].y * h)
+                x1 = int(landmarks[8].x * w)
+                y1 = int(landmarks[8].y * h)
 
-            x2 = int(landmarks[4].x * w)
-            y2 = int(landmarks[4].y * h)
+                x2 = int(landmarks[4].x * w)
+                y2 = int(landmarks[4].y * h)
 
-            distance = math.hypot(x2 - x1, y2 - y1)
+                cv2.circle(img, (x1, y1), 8, (0, 255, 255), -1)
+                cv2.circle(img, (x2, y2), 8, (0, 0, 255), -1)
 
-            volume_percent = int((distance / 200) * 100)
-            volume_percent = max(0, min(100, volume_percent))
+                distance = math.hypot(x2 - x1, y2 - y1)
+                volume_percent = int((distance / 200) * 100)
+                volume_percent = max(0, min(100, volume_percent))
 
-            st.write(f"Volume Level: {volume_percent}%")
+                cv2.putText(
+                    img,
+                    f"Volume: {volume_percent}%",
+                    (30, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (255, 0, 0),
+                    2,
+                )
 
-    FRAME_WINDOW.image(frame, channels="BGR")
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-camera.release()
+
+webrtc_streamer(
+    key="hand-volume",
+    rtc_configuration=RTC_CONFIGURATION,
+    video_processor_factory=HandVolumeProcessor,
+)

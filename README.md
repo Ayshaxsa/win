@@ -1,18 +1,15 @@
-# Hand Gesture Volume Control
-
-This project controls system volume using hand gestures.
+# Hand Volume Control
 
 ## Local Windows Version
-Run:
-python hand_volume.py
+Run `hand_volume.py` for full functionality:
+- Hand tracking with webcam
+- Volume control using gestures
+- Requires Windows
 
-Requirements:
+## Streamlit Cloud Demo
+- Shows placeholder image and info
+- Full webcam and volume control cannot run in the cloud
+- Demonstrates app interface
+
+## Requirements
 pip install -r requirements.txt
-
-## Streamlit Demo Version
-Run:
-streamlit run app.py
-
-Note:
-System volume control works only on Windows locally.
-Streamlit Cloud version is demo only.

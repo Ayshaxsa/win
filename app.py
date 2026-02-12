@@ -1,32 +1,13 @@
 import streamlit as st
-import cv2
-import numpy as np
 
 st.title("Hand Volume Control - Cloud Demo")
 
-st.write("Full hand tracking works locally on Windows (hand_volume.py).")
+st.write(
+    """
+    Full hand tracking and system volume control works locally on Windows
+    using `hand_volume.py`.  
+    Streamlit Cloud cannot access your webcam, so this demo only shows info.
+    """
+)
 
-run = st.checkbox("Start Webcam")
-
-FRAME_WINDOW = st.image([])
-
-cap = cv2.VideoCapture(0)
-
-while run:
-    ret, frame = cap.read()
-    if not ret:
-        st.write("No camera detected")
-        break
-    frame = cv2.flip(frame, 1)
-    cv2.putText(
-        frame,
-        "Webcam Running",
-        (30, 50),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (0, 255, 0),
-        2,
-    )
-    FRAME_WINDOW.image(frame, channels="BGR")
-
-cap.release()
+st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Hand_icon.svg/480px-Hand_icon.svg.png", caption="Demo Placeholder")
